@@ -173,17 +173,33 @@
             </div>
 
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm mb-2">GitHub Personal Access Token</label>
-                    <input type="password" id="tokenInput" class="w-full" placeholder="ghp_...">
-                    <div class="text-xs text-gray-500 mt-1 space-y-1">
-                        <p>A PAT is like a password for apps to access GitHub. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="text-blue-400 hover:underline">Create one here</a></p>
-                        <p class="font-semibold">Required permissions:</p>
-                        <ul class="list-disc list-inside pl-2">
-                            <li><strong>Fine-grained tokens:</strong> Repository permissions → Contents (Read and write)</li>
-                            <li><strong>Classic tokens:</strong> Select the <code class="bg-gray-700 px-1 rounded">repo</code> scope (full repository access)</li>
-                        </ul>
+                <div class="bg-blue-900 bg-opacity-20 border border-blue-700 rounded p-4 mb-2">
+                    <p class="text-sm font-semibold text-blue-200 mb-2">What is a Personal Access Token (PAT)?</p>
+                    <p class="text-xs text-blue-100 mb-3">A PAT is like a password that gives this app permission to read and edit files in your GitHub repository. You create it once and paste it below.</p>
+
+                    <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="btn btn-primary w-full text-center block mb-3">
+                        Create a GitHub Token →
+                    </a>
+
+                    <div class="bg-gray-800 rounded p-3 text-xs space-y-2">
+                        <p class="font-semibold text-gray-300">When creating your token, set these permissions:</p>
+                        <div class="space-y-1 text-gray-400">
+                            <p><strong>Option 1 (Recommended):</strong> Fine-grained token</p>
+                            <ul class="list-disc list-inside pl-3 space-y-1">
+                                <li>Repository access: Only select your vault repository</li>
+                                <li>Repository permissions → <strong>Contents</strong> → <strong>Read and write</strong></li>
+                            </ul>
+                            <p class="mt-2"><strong>Option 2:</strong> Classic token</p>
+                            <ul class="list-disc list-inside pl-3">
+                                <li>Check the <code class="bg-gray-700 px-1 rounded">repo</code> scope checkbox</li>
+                            </ul>
+                        </div>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Paste Your Token Here</label>
+                    <input type="password" id="tokenInput" class="w-full" placeholder="ghp_... or github_pat_...">
                 </div>
 
                 <div>
