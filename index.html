@@ -278,12 +278,12 @@
             <div id="sidebar" class="w-64 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden">
                 <!-- Sidebar Tabs -->
                 <div class="flex border-b border-gray-700">
-                    <div class="tab-btn active flex-1 text-center" data-tab="files">Files</div>
-                    <div class="tab-btn flex-1 text-center" data-tab="bookmarks">Bookmarks</div>
+                    <div class="tab-btn flex-1 text-center" data-tab="files">Files</div>
+                    <div class="tab-btn active flex-1 text-center" data-tab="bookmarks">Bookmarks</div>
                 </div>
 
                 <!-- Files Tab -->
-                <div id="filesTab" class="flex-1 flex flex-col overflow-hidden">
+                <div id="filesTab" class="hidden flex-1 flex flex-col overflow-hidden">
                     <div class="p-4 border-b border-gray-700">
                         <input type="text" id="searchFiles" class="w-full" placeholder="Search files...">
                     </div>
@@ -295,8 +295,11 @@
                 </div>
 
                 <!-- Bookmarks Tab -->
-                <div id="bookmarksTab" class="hidden flex-1 overflow-y-auto p-2">
-                    <div id="bookmarksList" class="space-y-1">
+                <div id="bookmarksTab" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-gray-700">
+                        <input type="text" id="searchFilesFromBookmarks" class="w-full" placeholder="Search all files...">
+                    </div>
+                    <div id="bookmarksList" class="flex-1 overflow-y-auto p-2 space-y-1">
                         <div class="text-sm text-gray-500 p-4 text-center">No bookmarks yet</div>
                     </div>
                 </div>
@@ -445,6 +448,20 @@
                 filterFiles(e.target.value);
             });
 
+            document.getElementById('searchFilesFromBookmarks').addEventListener('input', (e) => {
+                const query = e.target.value;
+
+                // Switch to files tab
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.tab-btn[data-tab="files"]').classList.add('active');
+                document.getElementById('filesTab').classList.remove('hidden');
+                document.getElementById('bookmarksTab').classList.add('hidden');
+
+                // Update the files search box and filter
+                document.getElementById('searchFiles').value = query;
+                filterFiles(query);
+            });
+
             document.getElementById('editor').addEventListener('input', () => {
                 if (viewMode === 'edit') {
                     // Don't auto-update preview in edit mode
@@ -471,6 +488,13 @@
 
                     document.getElementById('filesTab').classList.toggle('hidden', tab !== 'files');
                     document.getElementById('bookmarksTab').classList.toggle('hidden', tab !== 'bookmarks');
+
+                    // Clear search when switching to bookmarks
+                    if (tab === 'bookmarks') {
+                        document.getElementById('searchFiles').value = '';
+                        document.getElementById('searchFilesFromBookmarks').value = '';
+                        filterFiles('');
+                    }
                 });
             });
         }
