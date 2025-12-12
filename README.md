@@ -60,7 +60,9 @@ This app uses a **client-side only** security model:
    - Go to [Create a new Personal Access Token](https://github.com/settings/personal-access-tokens/new)
    - Give it a descriptive name (e.g., "Obsidian Mobile Editor")
    - Set expiration (or choose "No expiration" if you trust your device security)
-   - Select the `repo` scope (full control of private repositories)
+   - **Required permissions:**
+     - **Fine-grained tokens (recommended):** Repository permissions → Contents (Read and write)
+     - **Classic tokens:** Select the `repo` scope (full control of private repositories)
    - Click "Generate token"
    - Copy the token immediately (it won't be shown again)
 

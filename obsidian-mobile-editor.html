@@ -176,7 +176,14 @@
                 <div>
                     <label class="block text-sm mb-2">GitHub Personal Access Token</label>
                     <input type="password" id="tokenInput" class="w-full" placeholder="ghp_...">
-                    <p class="text-xs text-gray-500 mt-1">A PAT is like a password for apps to access GitHub. Needs 'repo' scope. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="text-blue-400 hover:underline">Create one here</a></p>
+                    <div class="text-xs text-gray-500 mt-1 space-y-1">
+                        <p>A PAT is like a password for apps to access GitHub. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" class="text-blue-400 hover:underline">Create one here</a></p>
+                        <p class="font-semibold">Required permissions:</p>
+                        <ul class="list-disc list-inside pl-2">
+                            <li><strong>Fine-grained tokens:</strong> Repository permissions → Contents (Read and write)</li>
+                            <li><strong>Classic tokens:</strong> Select the <code class="bg-gray-700 px-1 rounded">repo</code> scope (full repository access)</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div>
