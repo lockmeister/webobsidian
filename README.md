@@ -52,11 +52,17 @@ This app uses a **client-side only** security model:
 ### Prerequisites
 
 1. A GitHub repository containing your Obsidian vault (can be private)
-2. A GitHub Personal Access Token with `repo` scope
-   - Go to [GitHub Settings → Developer Settings → Personal Access Tokens → Tokens (classic)](https://github.com/settings/tokens)
-   - Click "Generate new token (classic)"
+2. A GitHub Personal Access Token (PAT) with `repo` scope
+
+   **What is a PAT?** A Personal Access Token is like a password that grants applications access to your GitHub account. Unlike your actual password, you can create multiple tokens with specific permissions and revoke them individually.
+
+   **How to create one:**
+   - Go to [Create a new Personal Access Token](https://github.com/settings/personal-access-tokens/new)
+   - Give it a descriptive name (e.g., "Obsidian Mobile Editor")
+   - Set expiration (or choose "No expiration" if you trust your device security)
    - Select the `repo` scope (full control of private repositories)
-   - Copy the token (it won't be shown again)
+   - Click "Generate token"
+   - Copy the token immediately (it won't be shown again)
 
 ### Using the App
 
