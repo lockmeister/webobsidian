@@ -48,6 +48,10 @@
             background-color: #2a2a2a;
         }
 
+        .opacity-50 {
+            opacity: 0.5;
+        }
+
         .file-item.active, .bookmark-item.active {
             background-color: #6a4c93;
         }
@@ -540,18 +544,46 @@
             renderBookmarks();
         }
 
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function findTodaysDailyNote() {
+            const todayStr = getTodayDateString();
+            // Look for a file that matches today's date pattern (e.g., 2024-04-03.md)
+            const dailyNote = fileTree.find(f =>
+                f.path.endsWith('.md') && f.path.includes(todayStr)
+            );
+            return dailyNote ? dailyNote.path : null;
+        }
+
         function renderBookmarks() {
             const container = document.getElementById('bookmarksList');
             const repoBookmarks = Object.values(bookmarks)
                 .filter(b => b.repoId === currentRepoId)
                 .sort((a, b) => b.timestamp - a.timestamp);
 
-            if (repoBookmarks.length === 0) {
-                container.innerHTML = '<div class="text-sm text-gray-500 p-4 text-center">No bookmarks yet</div>';
-                return;
+            // Build Today bookmark
+            const todayPath = findTodaysDailyNote();
+            const todayDateStr = getTodayDateString();
+            const todayActive = todayPath && currentFile === todayPath;
+
+            let html = `<div class="bookmark-item ${todayActive ? 'active' : ''} ${!todayPath ? 'opacity-50' : ''}" data-special="today" data-path="${todayPath || ''}">
+                <span class="truncate">📅 Today (${todayDateStr})</span>
+                <span class="text-xs text-gray-500">${todayPath ? '✓' : '✗'}</span>
+            </div>`;
+
+            // Add separator if there are regular bookmarks
+            if (repoBookmarks.length > 0) {
+                html += '<div class="border-b border-gray-700 my-2"></div>';
             }
 
-            container.innerHTML = repoBookmarks.map(bookmark => {
+            // Add regular bookmarks
+            html += repoBookmarks.map(bookmark => {
                 const isActive = currentFile === bookmark.path;
                 return `<div class="bookmark-item ${isActive ? 'active' : ''}" data-path="${bookmark.path}">
                     <span class="truncate">${bookmark.path}</span>
@@ -559,8 +591,28 @@
                 </div>`;
             }).join('');
 
-            // Add click handlers
-            container.querySelectorAll('.bookmark-item').forEach(item => {
+            // Show message if no bookmarks (but still show Today)
+            if (repoBookmarks.length === 0) {
+                html += '<div class="text-sm text-gray-500 p-4 text-center">No bookmarks yet</div>';
+            }
+
+            container.innerHTML = html;
+
+            // Add click handler for Today
+            const todayItem = container.querySelector('[data-special="today"]');
+            if (todayItem) {
+                todayItem.addEventListener('click', () => {
+                    const path = todayItem.dataset.path;
+                    if (path) {
+                        loadFile(path);
+                    } else {
+                        alert(`Today's daily note (${todayDateStr}.md) not found in the vault.`);
+                    }
+                });
+            }
+
+            // Add click handlers for regular bookmarks
+            container.querySelectorAll('.bookmark-item:not([data-special])').forEach(item => {
                 const path = item.dataset.path;
                 item.querySelector('span').addEventListener('click', () => {
                     loadFile(path);
