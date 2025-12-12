@@ -328,6 +328,9 @@
         let currentSha = null;
         let viewMode = 'edit'; // 'edit' or 'preview'
 
+        // In-memory cache for file contents (clears on page reload)
+        let fileCache = {}; // Key: "repoId:filePath", Value: { content, sha }
+
         // Initialize app
         function init() {
             loadRepos();
@@ -431,6 +434,8 @@
                     showSetup();
                 } else {
                     currentRepoId = e.target.value;
+                    // Clear cache when switching repos
+                    fileCache = {};
                     loadFileTree();
                 }
             });
@@ -730,12 +735,27 @@
         async function loadFile(path, fromHistory = false) {
             try {
                 const repo = getCurrentRepo();
-                const data = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${path}`);
+                const cacheKey = `${currentRepoId}:${path}`;
+
+                let content, sha;
+
+                // Check cache first
+                if (fileCache[cacheKey]) {
+                    content = fileCache[cacheKey].content;
+                    sha = fileCache[cacheKey].sha;
+                } else {
+                    // Fetch from GitHub API
+                    const data = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${path}`);
+                    content = atob(data.content);
+                    sha = data.sha;
+
+                    // Cache it
+                    fileCache[cacheKey] = { content, sha };
+                }
 
                 currentFile = path;
-                currentSha = data.sha;
+                currentSha = sha;
 
-                const content = atob(data.content);
                 document.getElementById('editor').value = content;
                 document.getElementById('currentFileName').textContent = path;
 
@@ -805,6 +825,13 @@
 
                 const result = await response.json();
                 currentSha = result.content.sha;
+
+                // Update cache with new SHA and content
+                const cacheKey = `${currentRepoId}:${currentFile}`;
+                fileCache[cacheKey] = {
+                    content: content,
+                    sha: currentSha
+                };
 
                 alert('File saved successfully!');
             } catch (error) {
