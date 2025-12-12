@@ -34,19 +34,35 @@
             transform: translateX(-100%);
         }
 
-        .file-item {
+        .file-item, .bookmark-item {
             cursor: pointer;
             padding: 8px 12px;
             border-radius: 4px;
             transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .file-item:hover {
+        .file-item:hover, .bookmark-item:hover {
             background-color: #2a2a2a;
         }
 
-        .file-item.active {
+        .file-item.active, .bookmark-item.active {
             background-color: #6a4c93;
+        }
+
+        .star-btn {
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .star-btn:hover, .star-btn.bookmarked {
+            opacity: 1;
+        }
+
+        .star-btn.bookmarked {
+            color: #fbbf24;
         }
 
         #editor {
@@ -111,6 +127,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            border: none;
         }
 
         .btn-primary {
@@ -131,7 +148,11 @@
             background-color: #3a3a3a;
         }
 
-        input, textarea {
+        .btn-secondary.active {
+            background-color: #6a4c93;
+        }
+
+        input, textarea, select {
             background-color: #202020;
             color: #dcddde;
             border: 1px solid #3a3a3a;
@@ -140,7 +161,7 @@
             min-height: 44px;
         }
 
-        input:focus, textarea:focus {
+        input:focus, textarea:focus, select:focus {
             outline: none;
             border-color: #6a4c93;
         }
@@ -157,6 +178,18 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #6a4c93;
+            color: #fff;
         }
     </style>
 </head>
@@ -198,6 +231,11 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-semibold mb-2">Repository Name (nickname)</label>
+                    <input type="text" id="repoNicknameInput" class="w-full" placeholder="My Vault">
+                </div>
+
+                <div>
                     <label class="block text-sm font-semibold mb-2">Paste Your Token Here</label>
                     <input type="password" id="tokenInput" class="w-full" placeholder="ghp_... or github_pat_...">
                 </div>
@@ -221,11 +259,14 @@
     <div id="mainApp" class="hidden h-full flex flex-col">
         <!-- Header -->
         <div class="bg-gray-900 border-b border-gray-700 p-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 flex-1">
                 <button id="toggleSidebar" class="btn btn-secondary">☰</button>
-                <h1 class="text-lg font-semibold" id="currentFileName">Obsidian Editor</h1>
+                <select id="repoSelector" class="flex-1 max-w-xs"></select>
+                <h1 class="text-lg font-semibold truncate" id="currentFileName">Obsidian Editor</h1>
             </div>
             <div class="flex items-center gap-2">
+                <button id="toggleView" class="btn btn-secondary">📝 Edit</button>
+                <button id="bookmarkBtn" class="btn btn-secondary">☆</button>
                 <button id="saveBtn" class="btn btn-primary">Save</button>
                 <button id="settingsBtn" class="btn btn-secondary">⚙</button>
             </div>
@@ -235,62 +276,94 @@
         <div class="flex-1 flex overflow-hidden">
             <!-- Sidebar -->
             <div id="sidebar" class="w-64 bg-gray-900 border-r border-gray-700 flex flex-col overflow-hidden">
-                <div class="p-4 border-b border-gray-700">
-                    <input type="text" id="searchFiles" class="w-full" placeholder="Search files...">
+                <!-- Sidebar Tabs -->
+                <div class="flex border-b border-gray-700">
+                    <div class="tab-btn active flex-1 text-center" data-tab="files">Files</div>
+                    <div class="tab-btn flex-1 text-center" data-tab="bookmarks">Bookmarks</div>
                 </div>
-                <div id="fileList" class="flex-1 overflow-y-auto p-2">
-                    <div class="flex items-center justify-center h-full">
-                        <div class="spinner"></div>
+
+                <!-- Files Tab -->
+                <div id="filesTab" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-gray-700">
+                        <input type="text" id="searchFiles" class="w-full" placeholder="Search files...">
+                    </div>
+                    <div id="fileList" class="flex-1 overflow-y-auto p-2">
+                        <div class="flex items-center justify-center h-full">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bookmarks Tab -->
+                <div id="bookmarksTab" class="hidden flex-1 overflow-y-auto p-2">
+                    <div id="bookmarksList" class="space-y-1">
+                        <div class="text-sm text-gray-500 p-4 text-center">No bookmarks yet</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Editor Area -->
-            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
-                <div class="flex-1 flex flex-col border-r border-gray-700">
-                    <textarea id="editor" class="flex-1 p-4 focus:outline-none" placeholder="Start typing..."></textarea>
-                </div>
-                <div id="preview" class="flex-1 p-4 prose prose-invert max-w-none"></div>
+            <!-- Editor/Preview Area -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <textarea id="editor" class="flex-1 p-4 focus:outline-none" placeholder="Start typing..."></textarea>
+                <div id="preview" class="hidden flex-1 p-4 prose prose-invert max-w-none"></div>
             </div>
         </div>
     </div>
 
     <script>
         // Configuration
-        let config = {
-            token: '',
-            owner: '',
-            repo: ''
-        };
+        let repos = [];
+        let currentRepoId = null;
+        let bookmarks = {};
 
         let fileTree = [];
         let currentFile = null;
         let currentSha = null;
+        let viewMode = 'edit'; // 'edit' or 'preview'
 
         // Initialize app
         function init() {
-            loadConfig();
+            loadRepos();
+            loadBookmarks();
 
-            if (!config.token || !config.owner || !config.repo) {
+            if (repos.length === 0) {
                 showSetup();
             } else {
+                currentRepoId = repos[0].id;
                 showMainApp();
                 loadFileTree();
+                updateRepoSelector();
             }
 
             setupEventListeners();
+            setupHistoryHandling();
         }
 
         // Config management
-        function loadConfig() {
-            const stored = localStorage.getItem('obsidian-config');
+        function loadRepos() {
+            const stored = localStorage.getItem('obsidian-repos');
             if (stored) {
-                config = JSON.parse(stored);
+                repos = JSON.parse(stored);
             }
         }
 
-        function saveConfig() {
-            localStorage.setItem('obsidian-config', JSON.stringify(config));
+        function saveRepos() {
+            localStorage.setItem('obsidian-repos', JSON.stringify(repos));
+        }
+
+        function loadBookmarks() {
+            const stored = localStorage.getItem('obsidian-bookmarks');
+            if (stored) {
+                bookmarks = JSON.parse(stored);
+            }
+        }
+
+        function saveBookmarks() {
+            localStorage.setItem('obsidian-bookmarks', JSON.stringify(bookmarks));
+        }
+
+        function getCurrentRepo() {
+            return repos.find(r => r.id === currentRepoId);
         }
 
         function showSetup() {
@@ -303,26 +376,63 @@
             document.getElementById('mainApp').classList.remove('hidden');
         }
 
+        function updateRepoSelector() {
+            const selector = document.getElementById('repoSelector');
+            selector.innerHTML = repos.map(repo =>
+                `<option value="${repo.id}" ${repo.id === currentRepoId ? 'selected' : ''}>${repo.nickname}</option>`
+            ).join('') + '<option value="__add__">+ Add Repository</option>';
+        }
+
         // Event listeners
         function setupEventListeners() {
             document.getElementById('saveSetup').addEventListener('click', () => {
-                config.token = document.getElementById('tokenInput').value.trim();
-                config.owner = document.getElementById('ownerInput').value.trim();
-                config.repo = document.getElementById('repoInput').value.trim();
+                const nickname = document.getElementById('repoNicknameInput').value.trim();
+                const token = document.getElementById('tokenInput').value.trim();
+                const owner = document.getElementById('ownerInput').value.trim();
+                const repo = document.getElementById('repoInput').value.trim();
 
-                if (!config.token || !config.owner || !config.repo) {
+                if (!nickname || !token || !owner || !repo) {
                     alert('Please fill in all fields');
                     return;
                 }
 
-                saveConfig();
+                const newRepo = {
+                    id: Date.now().toString(),
+                    nickname,
+                    token,
+                    owner,
+                    repo
+                };
+
+                repos.push(newRepo);
+                currentRepoId = newRepo.id;
+                saveRepos();
+
+                // Clear inputs
+                document.getElementById('repoNicknameInput').value = '';
+                document.getElementById('tokenInput').value = '';
+                document.getElementById('ownerInput').value = '';
+                document.getElementById('repoInput').value = '';
+
                 showMainApp();
+                updateRepoSelector();
                 loadFileTree();
             });
 
+            document.getElementById('repoSelector').addEventListener('change', (e) => {
+                if (e.target.value === '__add__') {
+                    showSetup();
+                } else {
+                    currentRepoId = e.target.value;
+                    loadFileTree();
+                }
+            });
+
             document.getElementById('settingsBtn').addEventListener('click', () => {
-                if (confirm('Reset configuration? This will reload the page.')) {
-                    localStorage.removeItem('obsidian-config');
+                const repoName = getCurrentRepo().nickname;
+                if (confirm(`Remove repository "${repoName}"? This will reload the page.`)) {
+                    repos = repos.filter(r => r.id !== currentRepoId);
+                    saveRepos();
                     location.reload();
                 }
             });
@@ -336,17 +446,129 @@
             });
 
             document.getElementById('editor').addEventListener('input', () => {
-                updatePreview();
+                if (viewMode === 'edit') {
+                    // Don't auto-update preview in edit mode
+                }
             });
 
             document.getElementById('saveBtn').addEventListener('click', saveFile);
+
+            document.getElementById('toggleView').addEventListener('click', () => {
+                viewMode = viewMode === 'edit' ? 'preview' : 'edit';
+                updateViewMode();
+            });
+
+            document.getElementById('bookmarkBtn').addEventListener('click', () => {
+                toggleBookmark();
+            });
+
+            // Sidebar tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    document.getElementById('filesTab').classList.toggle('hidden', tab !== 'files');
+                    document.getElementById('bookmarksTab').classList.toggle('hidden', tab !== 'bookmarks');
+                });
+            });
+        }
+
+        function updateViewMode() {
+            const editor = document.getElementById('editor');
+            const preview = document.getElementById('preview');
+            const toggleBtn = document.getElementById('toggleView');
+
+            if (viewMode === 'edit') {
+                editor.classList.remove('hidden');
+                preview.classList.add('hidden');
+                toggleBtn.textContent = '👁 Preview';
+                toggleBtn.classList.remove('active');
+            } else {
+                editor.classList.add('hidden');
+                preview.classList.remove('hidden');
+                toggleBtn.textContent = '📝 Edit';
+                toggleBtn.classList.add('active');
+                updatePreview();
+            }
+        }
+
+        function toggleBookmark() {
+            if (!currentFile) return;
+
+            const key = `${currentRepoId}:${currentFile}`;
+            const bookmarkBtn = document.getElementById('bookmarkBtn');
+
+            if (bookmarks[key]) {
+                delete bookmarks[key];
+                bookmarkBtn.textContent = '☆';
+            } else {
+                bookmarks[key] = {
+                    repoId: currentRepoId,
+                    path: currentFile,
+                    timestamp: Date.now()
+                };
+                bookmarkBtn.textContent = '★';
+            }
+
+            saveBookmarks();
+            renderBookmarks();
+        }
+
+        function renderBookmarks() {
+            const container = document.getElementById('bookmarksList');
+            const repoBookmarks = Object.values(bookmarks)
+                .filter(b => b.repoId === currentRepoId)
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            if (repoBookmarks.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-500 p-4 text-center">No bookmarks yet</div>';
+                return;
+            }
+
+            container.innerHTML = repoBookmarks.map(bookmark => {
+                const isActive = currentFile === bookmark.path;
+                return `<div class="bookmark-item ${isActive ? 'active' : ''}" data-path="${bookmark.path}">
+                    <span class="truncate">${bookmark.path}</span>
+                    <button class="star-btn bookmarked" data-path="${bookmark.path}">★</button>
+                </div>`;
+            }).join('');
+
+            // Add click handlers
+            container.querySelectorAll('.bookmark-item').forEach(item => {
+                const path = item.dataset.path;
+                item.querySelector('span').addEventListener('click', () => {
+                    loadFile(path);
+                });
+                item.querySelector('.star-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const key = `${currentRepoId}:${path}`;
+                    delete bookmarks[key];
+                    saveBookmarks();
+                    renderBookmarks();
+                    if (currentFile === path) {
+                        document.getElementById('bookmarkBtn').textContent = '☆';
+                    }
+                });
+            });
+        }
+
+        // History handling
+        function setupHistoryHandling() {
+            window.addEventListener('popstate', (e) => {
+                if (e.state && e.state.file) {
+                    loadFile(e.state.file, true);
+                }
+            });
         }
 
         // GitHub API functions
         async function githubRequest(endpoint, options = {}) {
+            const repo = getCurrentRepo();
             const url = `https://api.github.com${endpoint}`;
             const headers = {
-                'Authorization': `token ${config.token}`,
+                'Authorization': `token ${repo.token}`,
                 'Accept': 'application/vnd.github.v3+json',
                 ...options.headers
             };
@@ -362,9 +584,14 @@
 
         async function loadFileTree() {
             try {
-                const tree = await githubRequest(`/repos/${config.owner}/${config.repo}/git/trees/main?recursive=1`);
-                fileTree = tree.tree.filter(item => item.path.endsWith('.md') || item.path.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i));
+                const repo = getCurrentRepo();
+                const tree = await githubRequest(`/repos/${repo.owner}/${repo.repo}/git/trees/main?recursive=1`);
+                fileTree = tree.tree.filter(item =>
+                    (item.path.endsWith('.md') || item.path.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)) &&
+                    !item.path.split('/').some(part => part.startsWith('.'))
+                );
                 renderFileList();
+                renderBookmarks();
             } catch (error) {
                 alert('Error loading file tree: ' + error.message);
             }
@@ -374,13 +601,41 @@
             const fileList = document.getElementById('fileList');
             const mdFiles = fileTree.filter(f => f.path.endsWith('.md'));
 
-            fileList.innerHTML = mdFiles.map(file =>
-                `<div class="file-item" data-path="${file.path}">${file.path}</div>`
-            ).join('');
+            fileList.innerHTML = mdFiles.map(file => {
+                const isActive = currentFile === file.path;
+                const isBookmarked = bookmarks[`${currentRepoId}:${file.path}`];
+                return `<div class="file-item ${isActive ? 'active' : ''}" data-path="${file.path}">
+                    <span class="truncate flex-1">${file.path}</span>
+                    <button class="star-btn ${isBookmarked ? 'bookmarked' : ''}" data-path="${file.path}">${isBookmarked ? '★' : '☆'}</button>
+                </div>`;
+            }).join('');
 
             fileList.querySelectorAll('.file-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    loadFile(item.dataset.path);
+                const path = item.dataset.path;
+                item.querySelector('span').addEventListener('click', () => {
+                    loadFile(path);
+                });
+                item.querySelector('.star-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const key = `${currentRepoId}:${path}`;
+                    if (bookmarks[key]) {
+                        delete bookmarks[key];
+                        item.querySelector('.star-btn').textContent = '☆';
+                        item.querySelector('.star-btn').classList.remove('bookmarked');
+                    } else {
+                        bookmarks[key] = {
+                            repoId: currentRepoId,
+                            path: path,
+                            timestamp: Date.now()
+                        };
+                        item.querySelector('.star-btn').textContent = '★';
+                        item.querySelector('.star-btn').classList.add('bookmarked');
+                    }
+                    saveBookmarks();
+                    renderBookmarks();
+                    if (currentFile === path) {
+                        document.getElementById('bookmarkBtn').textContent = bookmarks[key] ? '★' : '☆';
+                    }
                 });
             });
         }
@@ -392,13 +647,14 @@
 
             items.forEach(item => {
                 const path = item.dataset.path.toLowerCase();
-                item.style.display = path.includes(lowerQuery) ? 'block' : 'none';
+                item.style.display = path.includes(lowerQuery) ? 'flex' : 'none';
             });
         }
 
-        async function loadFile(path) {
+        async function loadFile(path, fromHistory = false) {
             try {
-                const data = await githubRequest(`/repos/${config.owner}/${config.repo}/contents/${path}`);
+                const repo = getCurrentRepo();
+                const data = await githubRequest(`/repos/${repo.owner}/${repo.repo}/contents/${path}`);
 
                 currentFile = path;
                 currentSha = data.sha;
@@ -407,12 +663,24 @@
                 document.getElementById('editor').value = content;
                 document.getElementById('currentFileName').textContent = path;
 
+                // Update bookmark button
+                const bookmarkBtn = document.getElementById('bookmarkBtn');
+                bookmarkBtn.textContent = bookmarks[`${currentRepoId}:${path}`] ? '★' : '☆';
+
                 // Update active state
-                document.querySelectorAll('.file-item').forEach(item => {
+                document.querySelectorAll('.file-item, .bookmark-item').forEach(item => {
                     item.classList.toggle('active', item.dataset.path === path);
                 });
 
-                updatePreview();
+                // Update preview if in preview mode
+                if (viewMode === 'preview') {
+                    updatePreview();
+                }
+
+                // Update browser history
+                if (!fromHistory) {
+                    history.pushState({ file: path }, '', `#${encodeURIComponent(path)}`);
+                }
 
                 // Hide sidebar on mobile after selection
                 if (window.innerWidth < 768) {
@@ -431,14 +699,15 @@
 
             const content = document.getElementById('editor').value;
             const encodedContent = btoa(unescape(encodeURIComponent(content)));
+            const repo = getCurrentRepo();
 
             try {
                 const response = await fetch(
-                    `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${currentFile}`,
+                    `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/${currentFile}`,
                     {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `token ${config.token}`,
+                            'Authorization': `token ${repo.token}`,
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
@@ -491,9 +760,10 @@
             return content;
         }
 
-        function processImages() {
+        async function processImages() {
             const preview = document.getElementById('preview');
             const images = preview.querySelectorAll('img[src^="#obsidian-image:"]');
+            const repo = getCurrentRepo();
 
             images.forEach(async (img) => {
                 const imageName = decodeURIComponent(img.src.split('#obsidian-image:')[1]);
@@ -502,10 +772,10 @@
                 if (imageFile) {
                     try {
                         const response = await fetch(
-                            `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${imageFile.path}`,
+                            `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/${imageFile.path}`,
                             {
                                 headers: {
-                                    'Authorization': `token ${config.token}`,
+                                    'Authorization': `token ${repo.token}`,
                                     'Accept': 'application/vnd.github.v3+json'
                                 }
                             }
@@ -543,6 +813,14 @@
                 }
             }
         });
+
+        // Load file from URL hash on init
+        if (window.location.hash) {
+            const filePath = decodeURIComponent(window.location.hash.substring(1));
+            if (filePath) {
+                setTimeout(() => loadFile(filePath), 500);
+            }
+        }
 
         // Initialize on load
         init();
